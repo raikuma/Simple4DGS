@@ -17,6 +17,7 @@ from scene.dataset_readers import sceneLoadTypeCallbacks
 from scene.gaussian_model import GaussianModel
 from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
+from utils.data_utils import CameraDataset
 
 class Scene:
 
@@ -40,7 +41,10 @@ class Scene:
         self.train_cameras = {}
         self.test_cameras = {}
 
-        if os.path.exists(os.path.join(args.source_path, "sparse")):
+
+        if os.path.exists(os.path.join(args.source_path, "colmap_0")):
+            scene_info = sceneLoadTypeCallbacks["Neural3DVideo"](args.source_path, args.images, args.eval, args)
+        elif os.path.exists(os.path.join(args.source_path, "sparse")):
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.depths, args.eval, args.train_test_exp)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
@@ -94,7 +98,9 @@ class Scene:
             json.dump(exposure_dict, f, indent=2)
 
     def getTrainCameras(self, scale=1.0):
-        return self.train_cameras[scale]
+        # return self.train_cameras[scale]
+        return CameraDataset(self.train_cameras[scale].copy())
 
     def getTestCameras(self, scale=1.0):
-        return self.test_cameras[scale]
+        # return self.test_cameras[scale]
+        return CameraDataset(self.test_cameras[scale].copy())

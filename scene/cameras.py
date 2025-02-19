@@ -15,9 +15,10 @@ import numpy as np
 from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 from utils.general_utils import PILtoTorch
 import cv2
+from PIL import Image
 
 class Camera(nn.Module):
-    def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, depth_params, image, invdepthmap,
+    def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, depth_params, timestamp, image, invdepthmap,
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
                  train_test_exp = False, is_test_dataset = False, is_test_view = False
@@ -31,6 +32,8 @@ class Camera(nn.Module):
         self.FoVx = FoVx
         self.FoVy = FoVy
         self.image_name = image_name
+        self.timestamp = timestamp
+        self.resolution = resolution
 
         try:
             self.data_device = torch.device(data_device)
@@ -39,13 +42,15 @@ class Camera(nn.Module):
             print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device" )
             self.data_device = torch.device("cuda")
 
-        resized_image_rgb = PILtoTorch(image, resolution)
-        gt_image = resized_image_rgb[:3, ...]
+        # resized_image_rgb = PILtoTorch(image, resolution)
+        # gt_image = resized_image_rgb[:3, ...]
+        # self.alpha_mask = None
+        # if resized_image_rgb.shape[0] == 4:
+        #     self.alpha_mask = resized_image_rgb[3:4, ...].to(self.data_device)
+        # else: 
+        #     self.alpha_mask = torch.ones_like(resized_image_rgb[0:1, ...].to(self.data_device))
         self.alpha_mask = None
-        if resized_image_rgb.shape[0] == 4:
-            self.alpha_mask = resized_image_rgb[3:4, ...].to(self.data_device)
-        else: 
-            self.alpha_mask = torch.ones_like(resized_image_rgb[0:1, ...].to(self.data_device))
+        self.image_path = image
 
         if train_test_exp and is_test_view:
             if is_test_dataset:
@@ -53,9 +58,11 @@ class Camera(nn.Module):
             else:
                 self.alpha_mask[..., self.alpha_mask.shape[-1] // 2:] = 0
 
-        self.original_image = gt_image.clamp(0.0, 1.0).to(self.data_device)
-        self.image_width = self.original_image.shape[2]
-        self.image_height = self.original_image.shape[1]
+        # self.original_image = gt_image.clamp(0.0, 1.0).to(self.data_device)
+        # self.image_width = self.original_image.shape[2]
+        # self.image_height = self.original_image.shape[1]
+        self.image_width = self.resolution[0]
+        self.image_height = self.resolution[1]
 
         self.invdepthmap = None
         self.depth_reliable = False
@@ -87,6 +94,12 @@ class Camera(nn.Module):
         self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
+
+    @property
+    def original_image(self):
+        resized_image_rgb = PILtoTorch(Image.open(self.image_path), self.resolution)
+        gt_image = resized_image_rgb[:3, ...]
+        return gt_image.clamp(0.0, 1.0).to(self.data_device)
         
 class MiniCam:
     def __init__(self, width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform):

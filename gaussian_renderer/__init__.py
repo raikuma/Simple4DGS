@@ -51,9 +51,21 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 
+    # temporal
+    timestamp = viewpoint_camera.timestamp
+    t = pc.get_t
+    t_scale = pc.get_t_scale
+    velocity = pc.get_velocity
+    dt = (timestamp - t)
+    temporal_opacity = torch.exp(-(dt * t_scale)**4)
+    temporal_movement = velocity * dt
+
     means3D = pc.get_xyz
     means2D = screenspace_points
     opacity = pc.get_opacity
+
+    opacity = opacity * temporal_opacity
+    means3D = means3D + temporal_movement
 
     # If precomputed 3d covariance is provided, use it. If not, then it will be computed from
     # scaling / rotation by the rasterizer.
@@ -122,7 +134,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         "viewspace_points": screenspace_points,
         "visibility_filter" : (radii > 0).nonzero(),
         "radii": radii,
-        "depth" : depth_image
+        "depth" : depth_image,
+        "temporal_opacity" : temporal_opacity
         }
     
     return out

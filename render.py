@@ -34,9 +34,11 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
     makedirs(render_path, exist_ok=True)
     makedirs(gts_path, exist_ok=True)
 
-    for idx, view in enumerate(tqdm(views, desc="Rendering progress")):
-        rendering = render(view, gaussians, pipeline, background, use_trained_exp=train_test_exp, separate_sh=separate_sh)["render"]
-        gt = view.original_image[0:3, :, :]
+    for idx, (viewpoint_image, viewpoint_cam) in enumerate(tqdm(views, desc="Rendering progress")):
+        viewpoint_image = viewpoint_image.cuda()
+        viewpoint_cam = viewpoint_cam.cuda()
+        rendering = render(viewpoint_cam, gaussians, pipeline, background, use_trained_exp=train_test_exp, separate_sh=separate_sh)["render"]
+        gt = viewpoint_image[0:3, :, :]
 
         if args.train_test_exp:
             rendering = rendering[..., rendering.shape[-1] // 2:]
