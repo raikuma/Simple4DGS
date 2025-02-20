@@ -172,7 +172,7 @@ class GaussianModel:
 
     def create_from_pcd(self, pcd : BasicPointCloud, cam_infos : int, spatial_lr_scale : float):
         self.spatial_lr_scale = spatial_lr_scale
-        self.temporal_lr_scale = 1.0
+        self.temporal_lr_scale = 10.0
         fused_point_cloud = torch.tensor(np.asarray(pcd.points)).float().cuda()
         fused_color = RGB2SH(torch.tensor(np.asarray(pcd.colors)).float().cuda())
         features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
@@ -187,7 +187,7 @@ class GaussianModel:
         rots[:, 0] = 1
 
         opacities = self.inverse_opacity_activation(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
-        t = torch.zeros((fused_point_cloud.shape[0], 1), device="cuda")
+        t = torch.ones((fused_point_cloud.shape[0], 1), device="cuda") * 0.5
         t_scale = torch.ones((fused_point_cloud.shape[0], 1), device="cuda")
         velocity = torch.zeros((fused_point_cloud.shape[0], 3), device="cuda")
 
@@ -529,6 +529,7 @@ class GaussianModel:
             big_points_vs = self.max_radii2D > max_screen_size
             big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
             prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
+        print("prune", prune_mask.sum().item())
         self.prune_points(prune_mask)
         tmp_radii = self.tmp_radii
         self.tmp_radii = None

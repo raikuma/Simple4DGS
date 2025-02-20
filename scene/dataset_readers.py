@@ -491,7 +491,7 @@ def readN3VCameras(cam_extrinsics, cam_intrinsics, images_folder, near, far, sta
             if j < startime or (endtime != -1 and j >= endtime):
                 continue
                 
-            cam_info = CameraInfo2(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image_path=image_path, image_name=os.path.basename(image_path), width=width, height=height, near=near, far=far, timestamp=(j-startime), pose=None, hpdirecitons=None, cxr=0.0, cyr=0.0)
+            cam_info = CameraInfo2(uid=uid, R=R, T=T, FovY=FovY, FovX=FovX, image_path=image_path, image_name=os.path.basename(image_path), width=width, height=height, near=near, far=far, timestamp=(j-startime)/300, pose=None, hpdirecitons=None, cxr=0.0, cyr=0.0)
             cam_infos.append(cam_info)
             
     sys.stdout.write('\n')
