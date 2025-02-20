@@ -16,14 +16,14 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix
 from utils.general_utils import PILtoTorch
 import cv2
 from PIL import Image
+from copy import deepcopy
 
-class Camera(nn.Module):
+class Camera:
     def __init__(self, resolution, colmap_id, R, T, FoVx, FoVy, depth_params, timestamp, image, invdepthmap,
                  image_name, uid,
                  trans=np.array([0.0, 0.0, 0.0]), scale=1.0, data_device = "cuda",
                  train_test_exp = False, is_test_dataset = False, is_test_view = False
                  ):
-        super(Camera, self).__init__()
 
         self.uid = uid
         self.colmap_id = colmap_id
@@ -90,16 +90,17 @@ class Camera(nn.Module):
         self.trans = trans
         self.scale = scale
 
-        self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1).cuda()
-        self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1).cuda()
+        self.world_view_transform = torch.tensor(getWorld2View2(R, T, trans, scale)).transpose(0, 1)
+        self.projection_matrix = getProjectionMatrix(znear=self.znear, zfar=self.zfar, fovX=self.FoVx, fovY=self.FoVy).transpose(0,1)
         self.full_proj_transform = (self.world_view_transform.unsqueeze(0).bmm(self.projection_matrix.unsqueeze(0))).squeeze(0)
         self.camera_center = self.world_view_transform.inverse()[3, :3]
 
-    @property
-    def original_image(self):
-        resized_image_rgb = PILtoTorch(Image.open(self.image_path), self.resolution)
-        gt_image = resized_image_rgb[:3, ...]
-        return gt_image.clamp(0.0, 1.0).to(self.data_device)
+    def cuda(self):
+        cuda_copy = deepcopy(self)
+        for k, v in cuda_copy.__dict__.items():
+            if isinstance(v, torch.Tensor):
+                cuda_copy.__dict__[k] = v.to(cuda_copy.data_device)
+        return cuda_copy
         
 class MiniCam:
     def __init__(self, width, height, fovy, fovx, znear, zfar, world_view_transform, full_proj_transform):
