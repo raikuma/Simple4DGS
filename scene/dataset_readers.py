@@ -592,7 +592,8 @@ def readColmapSceneInfoNeural3DVideo(path, images, eval, args):
 
     cam_infos_unsorted = readN3VCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=path, near=near, far=far, 
                                         startime=args.start_timestamp, endtime=args.end_timestamp)
-    cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+    # cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
+    cam_infos = cam_infos_unsorted # already sorted
      
     # if eval:
     train_cam_infos = [_ for _ in cam_infos if "cam00" not in _.image_path]
